@@ -1,0 +1,10 @@
+@ctx/verifier-core was extracted on 2026-09-03 from:
+
+- github.com/zackproser/ctx @ 192b5518 — src/kernel/verifier-evidence.ts
+  (deploymentEvidencePassed, browserEvidencePassed).
+- github.com/zackproser/ctx-cli @ 06d31a6 — src/redaction.ts, src/receipt.ts
+  (buildBrowserReceipt), the evidence-manifest interfaces from src/contracts.ts,
+  tests/redaction.test.ts, tests/receipt.test.ts.
+
+Copied without history because the sources were spread across two
+repositories; no function body changed. MIT licensed by Zachary Proser.
