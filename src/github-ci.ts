@@ -2,7 +2,7 @@
 // executor's conclusion. Every reported check must finish successfully and at
 // least one check/status must exist. Neutral/skipped is deliberately not green.
 export interface GithubCiSnapshot {
-  head: string; finalHead: string; state: string; draft: boolean;
+  head: string; finalHead: string; state: string; draft: boolean; merged?: boolean;
   checks: Array<{ head_sha: string; status: string; conclusion: string | null }>;
   statuses: Array<{ state: string }>;
   complete: boolean;
@@ -12,8 +12,8 @@ export function assessGithubCi(value: GithubCiSnapshot) {
       || value.checks.some((check) => check.head_sha !== value.head)) {
     return { passed: false, pending: true, reason: 'GitHub snapshot is incomplete or the PR head changed.' };
   }
-  if (value.state !== 'open' || value.draft) {
-    return { passed: false, pending: false, reason: 'The delivered PR must be open and ready for review.' };
+  if ((value.state !== 'open' && !(value.state === 'closed' && value.merged === true)) || value.draft) {
+    return { passed: false, pending: false, reason: 'The delivered PR must be ready for review or merged; closed unmerged PRs do not count.' };
   }
   if (value.checks.length + value.statuses.length === 0) {
     return { passed: false, pending: true, reason: 'GitHub has not reported any CI checks for this head.' };

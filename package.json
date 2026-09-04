@@ -1,6 +1,6 @@
 {
   "name": "@ctx/verifier-core",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "CTX verifier core: evidence truth functions, evidence redaction, the browser evidence manifest, and the trusted-receipt builder shared by the CTX control plane and ctx-cli",
   "license": "MIT",
   "type": "module",
