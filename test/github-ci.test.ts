@@ -7,6 +7,12 @@ describe('independent GitHub CI verdict', () => {
     expect(assessGithubCi(green).passed).toBe(true);
     expect(assessGithubCi({ ...green, checks: [], statuses: [{ state: 'success' }] }).passed).toBe(true);
   });
+  it('preserves green evidence when a lane is merged before its siblings finish', () => {
+    expect(assessGithubCi({ ...green, state: 'closed', merged: true })).toMatchObject({ passed: true, pending: false });
+    expect(assessGithubCi({ ...green, state: 'closed', merged: false })).toMatchObject({ passed: false, pending: false });
+    expect(assessGithubCi({ ...green, state: 'closed', merged: true, complete: false }))
+      .toMatchObject({ passed: false, pending: true });
+  });
   it.each([
     { checks: [], statuses: [] }, { complete: false }, { finalHead: 'b'.repeat(40) },
     { checks: [{ head_sha: 'b'.repeat(40), status: 'completed', conclusion: 'success' }] },
