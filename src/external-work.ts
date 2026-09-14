@@ -1,0 +1,68 @@
+import { ExternalFormEvidenceSchema, ExternalFormPlanSchema, ExternalPacketSchema, sha256,
+  type ExternalPacket, type ExternalFormPlan } from '@ctx/contracts';
+
+export interface CurrentFact { item_id: string; revision: number; body: string; active: boolean }
+/** Re-read memory versions immediately before authorization AND dispatch. */
+export function externalPacketProblems(packet: ExternalPacket, facts: CurrentFact[], now: number): string[] {
+  const problems: string[] = [];
+  const keys = new Set<string>();
+  for (const answer of packet.answers) {
+    if (keys.has(answer.key)) problems.push(`Duplicate answer: ${answer.key}`);
+    keys.add(answer.key);
+    if (!answer.value.trim()) problems.push(`Missing answer: ${answer.key}`);
+    if (answer.personal_attestation && !answer.owner_confirmed) problems.push(`Current owner answer required: ${answer.key}`);
+    if (!answer.facts.length && !answer.owner_confirmed) problems.push(`Unsupported answer: ${answer.key}`);
+    for (const source of answer.facts) {
+      const current = facts.find(f => f.item_id === source.item_id);
+      if (!current?.active || current.revision !== source.revision || !current.body.includes(source.excerpt)
+        || Date.parse(source.valid_until) <= now) problems.push(`Stale or missing source: ${answer.key}:${source.item_id}`);
+    }
+  }
+  return problems;
+}
+
+export function externalTargetAllowed(url: string, expected: string): boolean {
+  try {
+    const actual = new URL(url); const target = new URL(expected);
+    return actual.protocol === 'https:' && !actual.username && !actual.password
+      && actual.origin === target.origin && actual.pathname === target.pathname && actual.search === target.search;
+  } catch { return false; }
+}
+
+/** No caller-supplied passed flag. All bindings and exact field readbacks matter. */
+export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknown, planRaw: unknown,
+  expected: { operation_id: string; not_before: string; now: number }): Promise<boolean> {
+  const e = ExternalFormEvidenceSchema.parse(raw);
+  const packet = ExternalPacketSchema.parse(packetRaw);
+  const plan = ExternalFormPlanSchema.parse(planRaw);
+  return e.operation_id === expected.operation_id
+    && e.packet_digest === await sha256(packet) && e.plan_digest === await sha256(plan)
+    && Date.parse(e.observed_at) >= Date.parse(expected.not_before)
+    && Date.parse(e.observed_at) <= expected.now + 60000 && expected.now - Date.parse(e.observed_at) <= 10 * 60000
+    && externalTargetAllowed(e.url, plan.url) && e.identity_text.trim() === plan.identity.text
+    && ['submitted', 'reconciled'].includes(e.phase) && !e.errors.length
+    && e.confirmation_text.trim() === plan.confirmation.text
+    && exactFormAnswers(packet, plan, e.values);
+}
+
+export function exactFormAnswers(packet: ExternalPacket, plan: ExternalFormPlan, values: Record<string, string>): boolean {
+  const keys = packet.answers.map(a => a.key);
+  return new Set(keys).size === keys.length && new Set(plan.fields.map(f => f.key)).size === keys.length
+    && plan.fields.length === keys.length && Object.keys(values).length === keys.length
+    && packet.answers.every(a => plan.fields.some(f => f.key === a.key) && values[a.key] === a.value);
+}
+
+export interface BookingEvidence {
+  id: string; iCalUID: string; status: string;
+  organizer: { email: string }; attendees: { email: string; responseStatus?: string }[];
+  start: { dateTime?: string }; end: { dateTime?: string }; htmlLink?: string;
+}
+/** A proposed slot / all-day event / declined or cancelled invitation is not a booking. */
+export function externalBookingPassed(event: BookingEvidence, expected: { uid: string; owner: string; organizer_domain: string; now: number }) {
+  const start = Date.parse(event.start.dateTime ?? ''); const end = Date.parse(event.end.dateTime ?? '');
+  const organizer = event.organizer.email.toLowerCase().split('@');
+  return Boolean(expected.uid) && event.iCalUID === expected.uid && event.status === 'confirmed'
+    && organizer.length === 2 && organizer[1] === expected.organizer_domain.toLowerCase()
+    && event.attendees.some(a => a.email.toLowerCase() === expected.owner.toLowerCase() && a.responseStatus !== 'declined')
+    && start > expected.now && end > start;
+}
