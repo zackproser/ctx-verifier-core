@@ -42,6 +42,7 @@ export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknow
     && externalTargetAllowed(e.url, plan.url) && e.identity_text.trim() === plan.identity.text
     && ['submitted', 'reconciled'].includes(e.phase) && !e.errors.length
     && e.confirmation_text.trim() === plan.confirmation.text
+    && (!plan.fields.some(f => f.control === 'toggle') || e.readback_context === 'fresh')
     && exactFormAnswers(packet, plan, e.values);
 }
 
@@ -54,15 +55,26 @@ export function exactFormAnswers(packet: ExternalPacket, plan: ExternalFormPlan,
 
 export interface BookingEvidence {
   id: string; iCalUID: string; status: string;
+  summary?: string; description?: string;
   organizer: { email: string }; attendees: { email: string; responseStatus?: string }[];
   start: { dateTime?: string }; end: { dateTime?: string }; htmlLink?: string;
 }
 /** A proposed slot / all-day event / declined or cancelled invitation is not a booking. */
-export function externalBookingPassed(event: BookingEvidence, expected: { uid: string; owner: string; organizer_domain: string; now: number }) {
+export function externalBookingPassed(event: BookingEvidence, expected: { uid: string; owner: string; organizer_domain: string; now: number; require_client_consultation?: boolean }) {
   const start = Date.parse(event.start.dateTime ?? ''); const end = Date.parse(event.end.dateTime ?? '');
   const organizer = event.organizer.email.toLowerCase().split('@');
   return Boolean(expected.uid) && event.iCalUID === expected.uid && event.status === 'confirmed'
     && organizer.length === 2 && organizer[1] === expected.organizer_domain.toLowerCase()
     && event.attendees.some(a => a.email.toLowerCase() === expected.owner.toLowerCase() && a.responseStatus !== 'declined')
-    && start > expected.now && end > start;
+    && start > expected.now && end > start
+    && (!expected.require_client_consultation || clientConsultation(event));
+}
+
+/** A provider-domain invitation alone cannot distinguish screening from the paid call. */
+function clientConsultation(event: BookingEvidence): boolean {
+  const title = event.summary ?? '';
+  const text = `${title}\n${event.description ?? ''}`;
+  return /\b(?:consultation|client (?:call|discussion|interview))\b/i.test(title)
+    && !/\b(?:introductory|introduction|alignment|vetting|screening|coordinator|pre[- ]?call)\b/i.test(text)
+    && Date.parse(event.end.dateTime ?? '') - Date.parse(event.start.dateTime ?? '') >= 30 * 60000;
 }

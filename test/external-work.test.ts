@@ -29,3 +29,18 @@ it('requires a correlated future organizer invitation, and handles cancellation 
   expect(externalBookingPassed(e,x)).toBe(true);
   for (const patch of [{status:'cancelled'}, {iCalUID:'other'}, {organizer:{email:'x@alphasights.com.evil'}}, {attendees:[{email:'owner@example.com',responseStatus:'declined'}]}, {start:{dateTime:'2025-01-01T00:00:00Z'},end:{dateTime:'2025-01-01T01:00:00Z'}}]) expect(externalBookingPassed({...e,...patch},x)).toBe(false);
 });
+
+it('requires a fresh context for toggle readback, even when a reload retained the same draft', async () => {
+  const p = ExternalPacketSchema.parse({ ...packet, purpose: 'availability', answers: [{ ...packet.answers[0], value: 'true' }] });
+  const target = ExternalFormPlanSchema.parse({ ...plan, fields: [{ key: 'x', control: 'toggle', locator: { by: 'role', role: 'button', name: '01:00 PM' }, selected: { attribute: 'class', value: 'tab-active' } }] });
+  const e = { ...await evidence(), packet_digest: await sha256(p), plan_digest: await sha256(target), values: { x: 'true' } };
+  expect(await externalFormEvidencePassed(e, p, target, expected)).toBe(false);
+  expect(await externalFormEvidencePassed({ ...e, readback_context: 'fresh' }, p, target, expected)).toBe(true);
+});
+
+it('does not count coordinator, screening, short, or unidentified meetings as client consultations', () => {
+  const e = { id:'client', iCalUID:'uid', status:'confirmed', summary:'Hosting Platforms consultation', organizer:{email:'expert@alphasights.com'}, attendees:[{email:'owner@example.com'}], start:{dateTime:'2026-09-16T13:00:00-04:00'}, end:{dateTime:'2026-09-16T14:00:00-04:00'} };
+  const x = { uid:'uid', owner:'owner@example.com', organizer_domain:'alphasights.com', now, require_client_consultation:true };
+  expect(externalBookingPassed(e,x)).toBe(true);
+  for(const patch of [{summary:'Coordinator alignment'}, {description:'Initial vetting call'}, {summary:undefined}, {end:{dateTime:'2026-09-16T13:05:00-04:00'}}]) expect(externalBookingPassed({...e,...patch},x)).toBe(false);
+});
