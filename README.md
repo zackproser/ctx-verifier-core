@@ -119,3 +119,5 @@ Optional form submit confirmations are part of the authorized plan digest. Their
 ## License
 
 MIT, see [LICENSE](LICENSE). Extracted from `ctx` and `ctx-cli`; see [NOTICE](NOTICE).
+
+AlphaSights API confirmations verify fresh saved state against the endpoint, advisor, timezone and baseline bound to authorization. Exact interval unions must preserve current/future availability and add only the approved hours. The shared payload validator enforces the same change before the trusted runner forwards a PUT; no UI banner can satisfy this verifier.

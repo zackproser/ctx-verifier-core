@@ -1,3 +1,4 @@
+import { alphaSightsAvailabilityStarts, alphaSightsStateMatches } from './alphasights-availability.js';
 import { ExternalFormEvidenceSchema, ExternalFormPlanSchema, ExternalPacketSchema, sha256,
   type ExternalPacket, type ExternalFormPlan } from '@ctx/contracts';
 
@@ -35,13 +36,25 @@ export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknow
   const e = ExternalFormEvidenceSchema.parse(raw);
   const packet = ExternalPacketSchema.parse(packetRaw);
   const plan = ExternalFormPlanSchema.parse(planRaw);
+  let confirmed: boolean;
+  if ('kind' in plan.confirmation) {
+    const read=e.availability_readback;
+    try {
+      const starts=alphaSightsAvailabilityStarts(packet,plan);
+      confirmed=!!read && read.url===plan.confirmation.url && read.status===200 && e.readback_context==='fresh'
+        && Date.parse(read.observed_at)>=Date.parse(expected.not_before)
+        && Date.parse(read.observed_at)<=Date.parse(e.observed_at)
+        && Date.parse(plan.confirmation.baseline.observed_at)<=Date.parse(read.observed_at)
+        && alphaSightsStateMatches(read,plan.confirmation,starts,read.observed_at);
+    }catch{confirmed=false;}
+  } else confirmed=e.confirmation_text.trim()===plan.confirmation.text;
   return e.operation_id === expected.operation_id
     && e.packet_digest === await sha256(packet) && e.plan_digest === await sha256(plan)
     && Date.parse(e.observed_at) >= Date.parse(expected.not_before)
     && Date.parse(e.observed_at) <= expected.now + 60000 && expected.now - Date.parse(e.observed_at) <= 10 * 60000
     && externalTargetAllowed(e.url, plan.url) && e.identity_text.trim() === plan.identity.text
     && ['submitted', 'reconciled'].includes(e.phase) && !e.errors.length
-    && e.confirmation_text.trim() === plan.confirmation.text
+    && confirmed
     && (!(plan.submit_confirmation || plan.fields.some(f => f.control === 'toggle')) || e.readback_context === 'fresh')
     && exactFormAnswers(packet, plan, e.values);
 }
