@@ -38,7 +38,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ctx/contracts": "git+https://github.com/zackproser/ctx-contracts.git#ca60e684990c9623bb672e73d2d288810f18879b"
+    "@ctx/contracts": "git+https://github.com/zackproser/ctx-contracts.git#a61109887a2cc78376870b16d43a4c5f473c9203"
   },
   "peerDependencies": {
     "zod": "^3.25.0"
