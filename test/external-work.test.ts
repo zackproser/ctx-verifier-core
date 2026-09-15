@@ -44,3 +44,19 @@ it('does not count coordinator, screening, short, or unidentified meetings as cl
   expect(externalBookingPassed(e,x)).toBe(true);
   for(const patch of [{summary:'Coordinator alignment'}, {description:'Initial vetting call'}, {summary:undefined}, {end:{dateTime:'2026-09-16T13:05:00-04:00'}}]) expect(externalBookingPassed({...e,...patch},x)).toBe(false);
 });
+
+it('binds optional submit confirmation without treating the dialog as saved-state evidence', async () => {
+  const target = ExternalFormPlanSchema.parse({ ...plan, submit_confirmation: {
+    prompt: { locator: { by: 'testId', testId: 'missing' }, text: 'Missing dates' },
+    submit: { locator: { by: 'testId', testId: 'save-again' }, text: 'Save Availability' },
+    guards: [{ locator: { by: 'text', text: 'Go Back', exact: true }, text: 'Go Back' }],
+  } });
+  const bound = { ...await evidence(), plan_digest: await sha256(target) };
+  expect(await externalFormEvidencePassed(bound, packet, target, expected)).toBe(false);
+  const fresh = { ...bound, readback_context: 'fresh' };
+  expect(await externalFormEvidencePassed(fresh, packet, target, expected)).toBe(true);
+  expect(await externalFormEvidencePassed({ ...fresh, phase: 'reconciled' }, packet, target, expected)).toBe(true);
+  expect(await externalFormEvidencePassed({ ...fresh, confirmation_text: 'Missing dates' }, packet, target, expected)).toBe(false);
+  expect(await externalFormEvidencePassed(await evidence(), packet, target, expected)).toBe(false);
+  expect(await externalFormEvidencePassed(fresh, packet, { ...target, submit_confirmation: { ...target.submit_confirmation!, submit: { ...target.submit_confirmation!.submit, text: 'Different action' } } }, expected)).toBe(false);
+});

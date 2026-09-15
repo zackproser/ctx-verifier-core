@@ -42,7 +42,7 @@ export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknow
     && externalTargetAllowed(e.url, plan.url) && e.identity_text.trim() === plan.identity.text
     && ['submitted', 'reconciled'].includes(e.phase) && !e.errors.length
     && e.confirmation_text.trim() === plan.confirmation.text
-    && (!plan.fields.some(f => f.control === 'toggle') || e.readback_context === 'fresh')
+    && (!(plan.submit_confirmation || plan.fields.some(f => f.control === 'toggle')) || e.readback_context === 'fresh')
     && exactFormAnswers(packet, plan, e.values);
 }
 

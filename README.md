@@ -114,6 +114,8 @@ npm run typecheck
 
 Keep the root entry free of Node built-ins; the Worker bundle depends on it.
 
+Optional form submit confirmations are part of the authorized plan digest. Their prompts are not saved-state evidence. Plans with a confirmation step require fresh-context readback for both submission and reconciliation; legacy plans retain their existing verdicts.
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Extracted from `ctx` and `ctx-cli`; see [NOTICE](NOTICE).
