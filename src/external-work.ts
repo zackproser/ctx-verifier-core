@@ -4,12 +4,13 @@ import { ExternalFormEvidenceSchema, ExternalFormPlanSchema, ExternalPacketSchem
 
 export interface CurrentFact { item_id: string; revision: number; body: string; active: boolean }
 /** Re-read memory versions immediately before authorization AND dispatch. */
-export function externalPacketProblems(packet: ExternalPacket, facts: CurrentFact[], now: number): string[] {
+export function externalPacketProblems(packet: ExternalPacket, facts: CurrentFact[], now: number, options: { require_owner_review?: boolean } = {}): string[] {
   const problems: string[] = [];
   const keys = new Set<string>();
   for (const answer of packet.answers) {
     if (keys.has(answer.key)) problems.push(`Duplicate answer: ${answer.key}`);
     keys.add(answer.key);
+    if (options.require_owner_review && !answer.owner_confirmed) problems.push(`Owner review required: ${answer.key}`);
     if (!answer.value.trim()) problems.push(`Missing answer: ${answer.key}`);
     if (answer.personal_attestation && !answer.owner_confirmed) problems.push(`Current owner answer required: ${answer.key}`);
     if (!answer.facts.length && !answer.owner_confirmed) problems.push(`Unsupported answer: ${answer.key}`);
@@ -32,7 +33,7 @@ export function externalTargetAllowed(url: string, expected: string): boolean {
 
 /** No caller-supplied passed flag. All bindings and exact field readbacks matter. */
 export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknown, planRaw: unknown,
-  expected: { operation_id: string; not_before: string; now: number }): Promise<boolean> {
+  expected: { operation_id: string; not_before: string; now: number; require_fresh?: boolean }): Promise<boolean> {
   const e = ExternalFormEvidenceSchema.parse(raw);
   const packet = ExternalPacketSchema.parse(packetRaw);
   const plan = ExternalFormPlanSchema.parse(planRaw);
@@ -55,6 +56,7 @@ export async function externalFormEvidencePassed(raw: unknown, packetRaw: unknow
     && externalTargetAllowed(e.url, plan.url) && e.identity_text.trim() === plan.identity.text
     && ['submitted', 'reconciled'].includes(e.phase) && !e.errors.length
     && confirmed
+    && (!expected.require_fresh || e.readback_context === 'fresh')
     && (!(plan.submit_confirmation || plan.fields.some(f => f.control === 'toggle')) || e.readback_context === 'fresh')
     && exactFormAnswers(packet, plan, e.values);
 }

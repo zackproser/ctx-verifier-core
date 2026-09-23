@@ -121,3 +121,7 @@ Optional form submit confirmations are part of the authorized plan digest. Their
 MIT, see [LICENSE](LICENSE). Extracted from `ctx` and `ctx-cli`; see [NOTICE](NOTICE).
 
 AlphaSights API confirmations verify fresh saved state against the endpoint, advisor, timezone and baseline bound to authorization. Exact interval unions must preserve current/future availability and add only the approved hours. The shared payload validator enforces the same change before the trusted runner forwards a PUT; no UI banner can satisfy this verifier.
+
+External form request verification binds one same-origin HTTPS write to exact flat JSON or URL-encoded fields. Every packet answer must have one unique request field; explicit static fields cannot overlap answers. Extra fields, duplicate JSON/form names, cross-origin endpoints and unsupported types fail closed. Complex provider payloads still need a dedicated adapter.
+
+Audited consumers opt into `require_fresh` for every form readback and `require_owner_review` for every answer. Those policies strengthen new operations without changing historical verifier results for unchanged inputs. `externalDeclarationKind` centralizes conservative process/personal declaration detection; callers exclude such questions from model input and require owner entry.
