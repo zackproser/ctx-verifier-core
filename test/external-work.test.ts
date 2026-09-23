@@ -7,6 +7,11 @@ const plan = ExternalFormPlanSchema.parse({contract:'ctx.external-form-plan.v1',
 const now = Date.parse('2026-09-14T15:00:00Z');
 const expected = {operation_id:id,not_before:'2026-09-14T14:59:00Z',now};
 async function evidence() { return {contract:'ctx.external-form-evidence.v1',operation_id:id,packet_digest:await sha256(packet),plan_digest:await sha256(plan),observed_at:'2026-09-14T15:00:00Z',url:plan.url,identity_text:'42',confirmation_text:'Saved',values:{x:'Built CTX'},errors:[],phase:'submitted'}; }
+it('requires fresh readback for every control under the new audited policy', async () => {
+  const policy={...expected,require_fresh:true};
+  expect(await externalFormEvidencePassed(await evidence(),packet,plan,policy)).toBe(false);
+  expect(await externalFormEvidencePassed({...await evidence(),readback_context:'fresh'},packet,plan,policy)).toBe(true);
+});
 it('accepts only bound, fresh, exact provider readback', async () => {
   expect(await externalFormEvidencePassed(await evidence(),packet,plan,expected)).toBe(true);
   for (const patch of [{url:'https://evil.example/42'},{url:'https://portal.example/43'}, {identity_text:'43'}, {confirmation_text:''}, {values:{x:'Different'}}, {errors:['Something went wrong']}, {phase:'inspected'}, {packet_digest:'f'.repeat(64)}, {plan_digest:'f'.repeat(64)}, {observed_at:'2026-09-14T14:00:00Z'}, {operation_id:'20000000-0000-4000-8000-000000000002'}]) {
