@@ -8,3 +8,5 @@ fails. This prevents merging one parallel lane from invalidating its evidence
 while the remaining graph continues. CTX introduces this rule with its initial
 CI verifier rollout and evaluation migration 053; no deployed CI receipts use
 the earlier 0.2.0 rule.
+
+Managed journey reload support: pin shared contracts5cade4b so StepResult accepts the new same-page reload action. Existing receipt bytes and evidence truth functions are unchanged.
