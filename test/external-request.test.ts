@@ -36,3 +36,10 @@ it('requires review of every answer in the new authorization policy, including s
   expect(externalPacketProblems(p,facts,Date.now())).toEqual([]);
   expect(externalPacketProblems(p,facts,Date.now(),{require_owner_review:true})).toContain('Owner review required: x');
 });
+
+it('distinguishes technical compliance from a personal declaration in the same question', () => {
+  const technical = 'How do you ensure compliance of autonomous systems to human-defined intents?';
+  expect(externalDeclarationKind(technical)).toBeNull();
+  expect(externalDeclarationKind(technical + ' Confirm your compliance with the agreement.')).toBe('personal');
+  expect(externalDeclarationKind(technical + ' Were your answers written without assistance?')).toBe('process');
+});

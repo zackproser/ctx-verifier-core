@@ -51,6 +51,9 @@ export function externalFormRequestMatches(packet: ExternalPacket, plan: Externa
 export function externalDeclarationKind(question: string): 'process' | 'personal' | null {
   const text = question.normalize('NFKC').replace(/[\u2010-\u2015]/g, '-').replace(/[\u2018\u2019]/g, "'");
   if (/unassisted|(?:your|my|their) own (?:words|responses|answers)|without.{0,60}(?:help|assistance|AI|tools)|third[- ]party (?:sources|tools|assistance)|(?:AI|machine)[- ](?:generated|assisted)|not.{0,40}(?:artificial intelligence|language model)|(?:produced|written|generated).{0,60}(?:tools|assistance)|sin (?:ayuda|asistencia)|sans (?:aide|assistance)|ohne (?:Hilfe|Unterstützung)/i.test(text)) return 'process';
-  if (/conflict|confidential|consent|agree|terms|restrict|employ|available|availability|compliance|certif|attest|familiarity|\b[1-5]\s*[-–]\s*[1-5]\b|procurement|decision.maker|current customer|committed spend/i.test(text)) return 'personal';
+  // A technical question can ask how a system follows its specification. Keep any other
+  // declaration in the same question, including a request to confirm personal compliance.
+  const personal = text.replace(/\bcompliance of (?:autonomous |automated |software |agentic )?(?:agents|systems|software) (?:with|to)\b/gi, 'behavior of software with');
+  if (/conflict|confidential|consent|agree|terms|restrict|employ|available|availability|compliance|certif|attest|familiarity|\b[1-5]\s*[-–]\s*[1-5]\b|procurement|decision.maker|current customer|committed spend/i.test(personal)) return 'personal';
   return null;
 }
